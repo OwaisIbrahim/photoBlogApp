@@ -2,7 +2,10 @@ package com.example.owais.photoblogapp;
 
 import android.content.Intent;
 import android.support.annotation.NonNull;
+import android.support.design.widget.BottomNavigationView;
 import android.support.design.widget.FloatingActionButton;
+import android.support.v4.app.Fragment;
+import android.support.v4.app.FragmentTransaction;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.support.v7.widget.Toolbar;
@@ -26,6 +29,11 @@ public class MainActivity extends AppCompatActivity {
     private FirebaseFirestore firebaseFirestore;
 
     private FloatingActionButton addPostBtn;
+    private BottomNavigationView mainBottomNav;
+
+    private HomeFragment homeFragment;
+    private AccountFragment accountFragment;
+    private NotificationFragment notificationFragment;
 
     private String current_user_id;
 
@@ -34,15 +42,45 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        mAuth = FirebaseAuth.getInstance();
 
         mainToolbar = (Toolbar) findViewById(R.id.main_toolbar);
         setSupportActionBar(mainToolbar);
         getSupportActionBar().setTitle("Photo Blog");
 
+        // FIREBASE INITIALIZATION
+        mAuth = FirebaseAuth.getInstance();
         firebaseFirestore = FirebaseFirestore.getInstance();
 
-        addPostBtn = (FloatingActionButton) findViewById(R.id.add_post_btn);
+        addPostBtn = findViewById(R.id.add_post_btn);
+        mainBottomNav = findViewById(R.id.main_bottom_nav);
+
+        // FRAGMENTS
+        homeFragment = new HomeFragment();
+        notificationFragment = new NotificationFragment();
+        accountFragment = new AccountFragment();
+
+        //When Bottom Nav is clicked
+        mainBottomNav.setOnNavigationItemSelectedListener(new BottomNavigationView.OnNavigationItemSelectedListener() {
+            @Override
+            public boolean onNavigationItemSelected(@NonNull MenuItem item) {
+
+                switch(item.getItemId()) {
+
+                    case R.id.bottom_action_home:
+                        replaceFragment(homeFragment);
+                        return true;
+                    case R.id.bottom_action_notif:
+                        replaceFragment(notificationFragment);
+                        return true;
+                    case R.id.bottom_action_account:
+                        replaceFragment(accountFragment);
+                        return true;
+                    default:
+                        return false;
+
+                }
+            }
+        });
 
         addPostBtn.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -131,4 +169,13 @@ public class MainActivity extends AppCompatActivity {
         mAuth.signOut();
         sendToLogin();
     }
+
+
+    // Replace the current fragment to another
+    private void replaceFragment(Fragment fragment) {
+        FragmentTransaction fragmentTransaction = getSupportFragmentManager().beginTransaction();
+        fragmentTransaction.replace(R.id.main_container, fragment);
+        fragmentTransaction.commit();
+    }
+
 }
