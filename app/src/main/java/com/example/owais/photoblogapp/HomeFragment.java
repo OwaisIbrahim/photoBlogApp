@@ -8,12 +8,15 @@ import android.support.v7.widget.RecyclerView;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.Toast;
 
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.firestore.DocumentChange;
+import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.EventListener;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.FirebaseFirestoreException;
+import com.google.firebase.firestore.Query;
 import com.google.firebase.firestore.QuerySnapshot;
 
 import java.util.ArrayList;
@@ -33,6 +36,8 @@ public class HomeFragment extends Fragment {
     private FirebaseFirestore firebaseFirestore;
     private FirebaseAuth firebaseAuth;
 
+    private DocumentSnapshot lastVisible;
+
     private BlogPostRecyclerAdapter blogPostRecyclerAdapter;
 
     public HomeFragment() {
@@ -41,7 +46,7 @@ public class HomeFragment extends Fragment {
 
 
     @Override
-    public View onCreateView(LayoutInflater inflater, ViewGroup container,
+    public View onCreateView(LayoutInflater inflater, final ViewGroup container,
                              Bundle savedInstanceState) {
 
         View view = inflater.inflate(R.layout.fragment_home, container, false);
@@ -58,11 +63,84 @@ public class HomeFragment extends Fragment {
         if( firebaseAuth.getCurrentUser() != null ) {
 
             firebaseFirestore = FirebaseFirestore.getInstance();
-            firebaseFirestore.collection("Posts").addSnapshotListener(new EventListener<QuerySnapshot>() {
+
+            // loadMoreost will be fireup when it scroll reaches its limit (3+3+3+... in this case)
+            blog_list_view.addOnScrollListener(new RecyclerView.OnScrollListener() {
+                @Override
+                public void onScrolled(RecyclerView recyclerView, int dx, int dy) {
+                    super.onScrolled(recyclerView, dx, dy);
+
+                    //if scroll reached to the bottom tben it will becomes true
+                    Boolean reacherBottom = ! recyclerView.canScrollVertically(1);
+
+                    if (reacherBottom) {
+                        String lastDesc = lastVisible.getString("desc");
+                        Toast.makeText(container.getContext(), "Reached: "+lastDesc, Toast.LENGTH_LONG).show();
+                        loadMorePosts();
+                    }
+
+                }
+            });
+
+            //make a query to sort the firebase posts on timestamp in descending order with the limit of 3
+            Query firstQuery = firebaseFirestore.collection("Posts")
+                    .orderBy("timestamp", Query.Direction.DESCENDING)
+                    .limit(3);
+
+            // feth the post from firebase show it to Blog Post List UI (fragment_home)
+            firstQuery.addSnapshotListener(new EventListener<QuerySnapshot>() {
                 @Override
                 public void onEvent(@Nullable QuerySnapshot queryDocumentSnapshots, @Nullable FirebaseFirestoreException e) {
 
                     if(queryDocumentSnapshots != null) {
+
+                        // If the post from firebase reaches its end so we dont want this function to execute
+                        if( !queryDocumentSnapshots.isEmpty() ) {
+
+                            // Record the last post on UI to fetch post next to it from firebase
+                            lastVisible = queryDocumentSnapshots.getDocuments().get(queryDocumentSnapshots.size() - 1);
+
+                            for (DocumentChange doc : queryDocumentSnapshots.getDocumentChanges()) {
+
+                                if (doc.getType() == DocumentChange.Type.ADDED) {
+                                    BlogPost blogPost = doc.getDocument().toObject(BlogPost.class);
+                                    blog_list.add(blogPost);
+
+                                    //adapter to notify that data set change
+                                    blogPostRecyclerAdapter.notifyDataSetChanged();
+                                }
+
+                            }
+                        }
+                    }
+                }
+            });
+
+        }
+
+
+
+
+        // Inflate the layout for this fragment
+        return view;
+    }
+
+    //This fuction function will fetch 3 more posts from firebase when it reaches at last of post limit in UI ()
+    public void loadMorePosts() {
+
+        Query nextQuery = firebaseFirestore.collection("Posts")
+                .orderBy("timestamp", Query.Direction.DESCENDING)
+                .startAfter(lastVisible)
+                .limit(3);
+
+        nextQuery.addSnapshotListener(new EventListener<QuerySnapshot>() {
+            @Override
+            public void onEvent(@Nullable QuerySnapshot queryDocumentSnapshots, @Nullable FirebaseFirestoreException e) {
+
+                if(queryDocumentSnapshots != null) {
+
+                    if( !queryDocumentSnapshots.isEmpty() ) {
+                        lastVisible = queryDocumentSnapshots.getDocuments().get(queryDocumentSnapshots.size() - 1);
 
                         for (DocumentChange doc : queryDocumentSnapshots.getDocumentChanges()) {
 
@@ -77,15 +155,8 @@ public class HomeFragment extends Fragment {
                         }
                     }
                 }
-            });
-
-        }
-
-
-
-
-        // Inflate the layout for this fragment
-        return view;
+            }
+        });
     }
 
 }
