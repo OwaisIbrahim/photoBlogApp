@@ -9,6 +9,7 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 
+import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.firestore.DocumentChange;
 import com.google.firebase.firestore.EventListener;
 import com.google.firebase.firestore.FirebaseFirestore;
@@ -30,6 +31,7 @@ public class HomeFragment extends Fragment {
     private List<BlogPost> blog_list;           // LIST for post details in FIREBASE
 
     private FirebaseFirestore firebaseFirestore;
+    private FirebaseAuth firebaseAuth;
 
     private BlogPostRecyclerAdapter blogPostRecyclerAdapter;
 
@@ -47,28 +49,37 @@ public class HomeFragment extends Fragment {
         blog_list = new ArrayList<>();
         blog_list_view = view.findViewById(R.id.blog_list_view);
 
+        firebaseAuth = FirebaseAuth.getInstance();
+
         blogPostRecyclerAdapter = new BlogPostRecyclerAdapter(blog_list);
         blog_list_view.setLayoutManager(new LinearLayoutManager(getActivity()));
         blog_list_view.setAdapter(blogPostRecyclerAdapter);
 
-        firebaseFirestore = FirebaseFirestore.getInstance();
-        firebaseFirestore.collection("Posts").addSnapshotListener(new EventListener<QuerySnapshot>() {
-            @Override
-            public void onEvent(@Nullable QuerySnapshot queryDocumentSnapshots, @Nullable FirebaseFirestoreException e) {
+        if( firebaseAuth.getCurrentUser() != null ) {
 
-                for(DocumentChange doc: queryDocumentSnapshots.getDocumentChanges()) {
+            firebaseFirestore = FirebaseFirestore.getInstance();
+            firebaseFirestore.collection("Posts").addSnapshotListener(new EventListener<QuerySnapshot>() {
+                @Override
+                public void onEvent(@Nullable QuerySnapshot queryDocumentSnapshots, @Nullable FirebaseFirestoreException e) {
 
-                    if(doc.getType() == DocumentChange.Type.ADDED) {
-                        BlogPost blogPost = doc.getDocument().toObject(BlogPost.class);
-                        blog_list.add(blogPost);
+                    if(queryDocumentSnapshots != null) {
 
-                        //adapter to notify that data set change
-                        blogPostRecyclerAdapter.notifyDataSetChanged();
+                        for (DocumentChange doc : queryDocumentSnapshots.getDocumentChanges()) {
+
+                            if (doc.getType() == DocumentChange.Type.ADDED) {
+                                BlogPost blogPost = doc.getDocument().toObject(BlogPost.class);
+                                blog_list.add(blogPost);
+
+                                //adapter to notify that data set change
+                                blogPostRecyclerAdapter.notifyDataSetChanged();
+                            }
+
+                        }
                     }
-
                 }
-            }
-        });
+            });
+
+        }
 
 
 

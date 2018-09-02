@@ -59,38 +59,43 @@ public class MainActivity extends AppCompatActivity {
         notificationFragment = new NotificationFragment();
         accountFragment = new AccountFragment();
 
-        //When Bottom Nav is clicked
-        mainBottomNav.setOnNavigationItemSelectedListener(new BottomNavigationView.OnNavigationItemSelectedListener() {
-            @Override
-            public boolean onNavigationItemSelected(@NonNull MenuItem item) {
+        replaceFragment(homeFragment);
 
-                switch(item.getItemId()) {
+        if( mAuth.getCurrentUser() != null ) {
 
-                    case R.id.bottom_action_home:
-                        replaceFragment(homeFragment);
-                        return true;
-                    case R.id.bottom_action_notif:
-                        replaceFragment(notificationFragment);
-                        return true;
-                    case R.id.bottom_action_account:
-                        replaceFragment(accountFragment);
-                        return true;
-                    default:
-                        return false;
+            //When Bottom Nav is clicked
+            mainBottomNav.setOnNavigationItemSelectedListener(new BottomNavigationView.OnNavigationItemSelectedListener() {
+                @Override
+                public boolean onNavigationItemSelected(@NonNull MenuItem item) {
+
+                    switch (item.getItemId()) {
+
+                        case R.id.bottom_action_home:
+                            replaceFragment(homeFragment);
+                            return true;
+                        case R.id.bottom_action_notif:
+                            replaceFragment(notificationFragment);
+                            return true;
+                        case R.id.bottom_action_account:
+                            replaceFragment(accountFragment);
+                            return true;
+                        default:
+                            return false;
+
+                    }
+                }
+            });
+
+            addPostBtn.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+
+                    Intent intent = new Intent(MainActivity.this, NewPostActivity.class);
+                    startActivity(intent);
 
                 }
-            }
-        });
-
-        addPostBtn.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-
-                Intent intent = new Intent(MainActivity.this, NewPostActivity.class);
-                startActivity(intent);
-
-            }
-        });
+            });
+        }
     }
 
     @Override
