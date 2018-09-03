@@ -37,6 +37,7 @@ public class HomeFragment extends Fragment {
     private FirebaseAuth firebaseAuth;
 
     private DocumentSnapshot lastVisible;
+    private Boolean isFirstPageFirstLoad = true;
 
     private BlogPostRecyclerAdapter blogPostRecyclerAdapter;
 
@@ -88,7 +89,8 @@ public class HomeFragment extends Fragment {
                     .limit(3);
 
             // feth the post from firebase show it to Blog Post List UI (fragment_home)
-            firstQuery.addSnapshotListener(new EventListener<QuerySnapshot>() {
+            firstQuery.addSnapshotListener(getActivity(), new EventListener<QuerySnapshot>() {
+                //getActivity() added because it specifies the addSnapshotListener to run until HomeFragment activity is live
                 @Override
                 public void onEvent(@Nullable QuerySnapshot queryDocumentSnapshots, @Nullable FirebaseFirestoreException e) {
 
@@ -97,20 +99,32 @@ public class HomeFragment extends Fragment {
                         // If the post from firebase reaches its end so we dont want this function to execute
                         if( !queryDocumentSnapshots.isEmpty() ) {
 
-                            // Record the last post on UI to fetch post next to it from firebase
-                            lastVisible = queryDocumentSnapshots.getDocuments().get(queryDocumentSnapshots.size() - 1);
+                            //to stop this function to fetch firebase data again when any post is updated 1 2 3, 4 5 6  ,,, 7 1 2, 3 4 5, 6
+                            if(isFirstPageFirstLoad) {
 
+                                // Record the last post on UI to fetch post next to it from firebase
+                                lastVisible = queryDocumentSnapshots.getDocuments().get(queryDocumentSnapshots.size() - 1);
+                            }
                             for (DocumentChange doc : queryDocumentSnapshots.getDocumentChanges()) {
 
                                 if (doc.getType() == DocumentChange.Type.ADDED) {
-                                    BlogPost blogPost = doc.getDocument().toObject(BlogPost.class);
-                                    blog_list.add(blogPost);
+
+                                    String blogPostId = doc.getDocument().getId();
+                                    BlogPost blogPost = doc.getDocument().toObject(BlogPost.class).withId(blogPostId);
+
+                                    if(isFirstPageFirstLoad) {
+                                        blog_list.add(blogPost);
+                                    } else {
+                                        blog_list.add(0, blogPost);
+                                    }
+
 
                                     //adapter to notify that data set change
                                     blogPostRecyclerAdapter.notifyDataSetChanged();
                                 }
 
                             }
+                            isFirstPageFirstLoad = false;
                         }
                     }
                 }
@@ -133,7 +147,7 @@ public class HomeFragment extends Fragment {
                 .startAfter(lastVisible)
                 .limit(3);
 
-        nextQuery.addSnapshotListener(new EventListener<QuerySnapshot>() {
+        nextQuery.addSnapshotListener(getActivity(), new EventListener<QuerySnapshot>() {
             @Override
             public void onEvent(@Nullable QuerySnapshot queryDocumentSnapshots, @Nullable FirebaseFirestoreException e) {
 
@@ -145,7 +159,9 @@ public class HomeFragment extends Fragment {
                         for (DocumentChange doc : queryDocumentSnapshots.getDocumentChanges()) {
 
                             if (doc.getType() == DocumentChange.Type.ADDED) {
-                                BlogPost blogPost = doc.getDocument().toObject(BlogPost.class);
+
+                                String blogPostId = doc.getDocument().getId();
+                                BlogPost blogPost = doc.getDocument().toObject(BlogPost.class).withId(blogPostId);
                                 blog_list.add(blogPost);
 
                                 //adapter to notify that data set change

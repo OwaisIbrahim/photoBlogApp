@@ -13,13 +13,17 @@ import com.bumptech.glide.Glide;
 import com.bumptech.glide.request.RequestOptions;
 import com.google.android.gms.tasks.OnCompleteListener;
 import com.google.android.gms.tasks.Task;
+import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.firestore.DocumentSnapshot;
+import com.google.firebase.firestore.FieldValue;
 import com.google.firebase.firestore.FirebaseFirestore;
 
 import android.text.format.DateFormat;
 
 import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import de.hdodenhof.circleimageview.CircleImageView;
 
@@ -29,6 +33,7 @@ public class BlogPostRecyclerAdapter extends RecyclerView.Adapter<BlogPostRecycl
     public Context context;
 
     private FirebaseFirestore firebaseFirestore;
+    private FirebaseAuth firebaseAuth;
 
     // CONSTRUCTOR - recieve the list of posts from home activity
     public BlogPostRecyclerAdapter(List<BlogPost> blog_list) {
@@ -42,17 +47,22 @@ public class BlogPostRecyclerAdapter extends RecyclerView.Adapter<BlogPostRecycl
         View view  = LayoutInflater.from(parent.getContext()).inflate(R.layout.blog_list_item, parent, false);
         context = parent.getContext();
         firebaseFirestore = FirebaseFirestore.getInstance();
+        firebaseAuth = FirebaseAuth.getInstance();
         return new ViewHolder(view);
     }
 
     @Override
     public void onBindViewHolder(@NonNull final ViewHolder holder, int position) {
 
+        final String blogPostId = blog_list.get(position).BlogPostId;
+        final String currentUserId = firebaseAuth.getCurrentUser().getUid();
+
         String desc_data = blog_list.get(position).getDesc();
         holder.setDescText(desc_data);
 
         String image_url = blog_list.get(position).getImage_url();
-        holder.setBlogImage(image_url);
+        String thumbUrl = blog_list.get(position).getImage_thumb();
+        holder.setBlogImage(image_url, thumbUrl);
 
         String user_id = blog_list.get(position).getUser_id();
         //User Data will be retrieved here...
@@ -71,6 +81,19 @@ public class BlogPostRecyclerAdapter extends RecyclerView.Adapter<BlogPostRecycl
         long millisecond = blog_list.get(position).getTimestamp().getTime();
         String dateString = DateFormat.format("MM/dd/yyyy", new Date(millisecond)).toString();
         holder.setBlogDate(dateString);
+
+        //Likes Feature
+        holder.blogLikeBtn.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+
+                Map<String, Object> likesMap = new HashMap<>();
+                likesMap.put("timestamp", FieldValue.serverTimestamp());
+
+                firebaseFirestore.collection("Posts/" + blogPostId + "/Likes").document(currentUserId).set(likesMap);
+
+            }
+        });
     }
 
     @Override
@@ -88,10 +111,15 @@ public class BlogPostRecyclerAdapter extends RecyclerView.Adapter<BlogPostRecycl
         private TextView blogUserName;
         private CircleImageView blogUserImage;
 
+        private ImageView blogLikeBtn;
+        private TextView blogLikeCount;
+
 
         public ViewHolder(View itemView) {
             super(itemView);
             mView = itemView;
+
+            blogLikeBtn = mView.findViewById(R.id.blog_like_btn);
         }
 
         public void setDescText(String descText) {
@@ -99,9 +127,13 @@ public class BlogPostRecyclerAdapter extends RecyclerView.Adapter<BlogPostRecycl
             descView.setText(descText);
         }
 
-        public void setBlogImage(String downloadUri) {
+        public void setBlogImage(String downloadUri, String thumbUri) {
             blogImageView = mView.findViewById(R.id.blog_image);
-            Glide.with(context).load(downloadUri).into(blogImageView);
+            RequestOptions requestOptions = new RequestOptions();
+            requestOptions.placeholder(R.drawable.image_placeholder);
+            Glide.with(context).applyDefaultRequestOptions(requestOptions).load(downloadUri).thumbnail(
+                    Glide.with(context).load(thumbUri)
+            ).into(blogImageView);
         }
 
         public void setBlogDate(String date) {

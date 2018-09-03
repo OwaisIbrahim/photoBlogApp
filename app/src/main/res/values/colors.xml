@@ -5,4 +5,7 @@
     <color name="colorAccent">#f44336</color>
 
     <color name="whiteHalfTransparent">#80ffffff</color>
+    
+    <color name="likeBtnGrey">#747474</color>
+    <color name="likeBtnAccent">#F44336</color>
 </resources>
